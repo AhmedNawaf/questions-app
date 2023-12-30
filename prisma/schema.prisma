@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Todo: Add migrations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum POST_TYPE {
+  question
+  answer
+}
+
+model users {
+  id       Int               @id @default(autoincrement())
+  name     String
+  email    String            @unique
+  password String
+  posts    posts[]
+  votes    post_user_votes[]
+}
+
+model posts {
+  id        Int               @id @default(autoincrement())
+  user      users             @relation(fields: [user_id], references: [id])
+  user_id   Int
+  parent_id Int?
+  type      POST_TYPE
+  accepted  Boolean?
+  tags      String
+  votes     post_user_votes[]
+}
+
+model post_user_votes {
+  id      Int   @id @default(autoincrement())
+  user    users @relation(fields: [user_id], references: [id])
+  user_id Int
+  post    posts @relation(fields: [post_id], references: [id])
+  post_id Int
+}
+
+model tags {
+  id          Int    @id @default(autoincrement())
+  name        String
+  slug        String @unique
+  description String
+}
