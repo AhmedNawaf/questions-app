@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Todo: Add migrations
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -30,11 +28,18 @@ model posts {
   id        Int               @id @default(autoincrement())
   user      users             @relation(fields: [user_id], references: [id])
   user_id   Int
+  parent    posts?            @relation("Questions", fields: [parent_id], references: [id])
+  questions posts[]           @relation("Questions")
   parent_id Int?
   type      POST_TYPE
+  title     String?
+  content   String
   accepted  Boolean?
-  tags      String
+  tags      Int[]
   votes     post_user_votes[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 model post_user_votes {
@@ -43,6 +48,8 @@ model post_user_votes {
   user_id Int
   post    posts @relation(fields: [post_id], references: [id])
   post_id Int
+
+  @@unique([user_id, post_id], name: "user_id_post_id")
 }
 
 model tags {
