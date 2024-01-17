@@ -1,5 +1,7 @@
-import { getPostById, getPosts } from '@/src/models/post';
+import { getPostById } from '@/src/models/post';
 import { NextApiRequest, NextApiResponse } from 'next';
+
+export type PostData = Awaited<ReturnType<typeof getPostById>>;
 
 export default async function handler(
   req: NextApiRequest,

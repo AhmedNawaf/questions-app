@@ -1,5 +1,6 @@
 import { comparePassword, updateUser } from '@/src/models/user';
 import { auth, ModifiedRequest } from '@/src/utils/auth';
+import { prisma } from '@/src/utils/db';
 import { NextApiResponse } from 'next';
 
 const handler = async (req: ModifiedRequest, res: NextApiResponse) => {
@@ -9,8 +10,9 @@ const handler = async (req: ModifiedRequest, res: NextApiResponse) => {
     password: string;
     newPassword: string;
   };
-
-  if (await comparePassword(password, req.user.password)) {
+  const user = await prisma.users.findUnique({ where: { id: req.user.id } });
+  if (!user) throw new Error();
+  if (await comparePassword(password, user.password)) {
     await updateUser(req.user.id, { password: newPassword });
     return res.status(200).json({});
   }

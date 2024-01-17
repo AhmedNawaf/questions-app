@@ -1,10 +1,9 @@
 import { prisma } from '../utils/db';
-import { posts } from '@prisma/client';
-
-type CreateQuestion = Pick<
-  posts,
-  'user_id' | 'type' | 'title' | 'content' | 'tags'
->;
+import type { posts, Prisma, VOTE_TYPE } from '@prisma/client';
+6;
+type CreateQuestion = Pick<posts, 'user_id' | 'type' | 'title' | 'content'> & {
+  tags: number[];
+};
 
 type CreateAnswer = Omit<CreateQuestion, 'title' | 'tags'> & {
   parent_id: number;
@@ -19,24 +18,41 @@ interface PostOptions {
 }
 
 export async function getPosts({ page, tag, sort = 'desc' }: PostOptions) {
-  const result = await prisma.posts.findMany({
-    take: pageSize,
-    skip: page * pageSize,
+  const query: Prisma.postsFindManyArgs = {
     where: {
-      tags: tag
-        ? {
-            has: tag,
-          }
-        : undefined,
+      tags: tag ? { some: { tag_id: tag } } : undefined,
       type: {
         equals: 'question',
       },
     },
-    orderBy: {
-      created_at: sort,
-    },
-  });
-  return result;
+  };
+  const [result, totalPages] = await prisma.$transaction([
+    prisma.posts.findMany({
+      where: query.where,
+      orderBy: {
+        created_at: sort,
+      },
+      include: {
+        _count: {
+          select: { answers: true },
+        },
+        tags: {
+          include: { tag: true },
+        },
+      },
+      take: pageSize,
+      skip: page * pageSize,
+    }),
+    prisma.posts.count({ where: query.where }),
+  ]);
+  return {
+    posts: result.map(({ _count, tags, ...rest }) => ({
+      answersCount: _count.answers,
+      tags: tags.map(({ tag }) => tag),
+      ...rest,
+    })),
+    totalPages: Math.ceil(totalPages / pageSize),
+  };
 }
 
 export async function getPostById(id: number) {
@@ -48,32 +64,69 @@ export async function getPostById(id: number) {
     },
     include: {
       user: { select: { name: true } },
-      _count: {
-        select: {
-          votes: true,
+      votes: true,
+      tags: {
+        include: {
+          tag: true,
         },
+      },
+      answers: {
+        include: {
+          votes: {
+            select: {
+              type: true,
+            },
+          },
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: { created_at: 'desc' },
       },
     },
   });
   if (!post) throw Error('Not Found');
-  const [tags, answers] = await Promise.all([
-    await prisma.tags.findMany({ where: { id: { in: post?.tags } } }),
-    await prisma.posts.findMany({ where: { parent_id: post.id } }),
-  ]);
-  const question = { ...post, tags };
+
   return {
-    question,
-    answers,
-    totalVotes: post._count.votes,
+    question: post,
+    tags: post.tags.map(({ tag }) => tag),
+    answers: post.answers.map(({ votes, ...rest }) => ({
+      totalVotes: (() => {
+        let total = 0;
+        for (const vote of votes) {
+          total += vote.type === 'up_vote' ? 1 : -1;
+        }
+        return total;
+      })(),
+      ...rest,
+    })),
+    totalVotes: (() => {
+      let total = 0;
+      for (const vote of post.votes) {
+        total += vote.type === 'up_vote' ? 1 : -1;
+      }
+      return total;
+    })(),
   };
 }
 
-export async function createQuestion({ user_id, ...data }: CreateQuestion) {
+export async function createQuestion({
+  user_id,
+  tags,
+  ...data
+}: CreateQuestion) {
   const result = await prisma.posts.create({
     data: {
       ...data,
       user: {
         connect: { id: user_id },
+      },
+      tags: {
+        createMany: {
+          data: tags.map((tag) => ({ tag_id: tag })),
+        },
       },
     },
   });
@@ -98,16 +151,21 @@ export async function createAnswer({
 export async function createVote({
   post_id,
   user_id,
+  type,
 }: {
   post_id: number;
   user_id: number;
+  type: VOTE_TYPE;
 }) {
   await prisma.post_user_votes.upsert({
     create: {
       user: { connect: { id: user_id } },
       post: { connect: { id: post_id } },
+      type,
     },
-    update: {},
+    update: {
+      type,
+    },
     where: {
       user_id_post_id: {
         post_id,

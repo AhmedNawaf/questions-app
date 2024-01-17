@@ -36,6 +36,6 @@ export const auth =
       req.user = await check(req, res);
       return handler(req, res);
     } catch (error) {
-      throw new Error();
+      res.status(401).json({});
     }
   };

@@ -7,5 +7,5 @@ interface CookieOptions {
 export function createCookie(token: string, { expired }: CookieOptions = {}) {
   return `accessToken=${token}; Max-Age=${
     expired ? -1 : cookieAge
-  }; Path=/; HttpOnly; Secure; SameSite=Lax`;
+  }; Path=/; HttpOnly; SameSite=Lax`;
 }

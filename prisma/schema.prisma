@@ -15,6 +15,11 @@ enum POST_TYPE {
   answer
 }
 
+enum VOTE_TYPE {
+  up_vote
+  down_vote
+}
+
 model users {
   id       Int               @id @default(autoincrement())
   name     String
@@ -28,33 +33,43 @@ model posts {
   id        Int               @id @default(autoincrement())
   user      users             @relation(fields: [user_id], references: [id])
   user_id   Int
-  parent    posts?            @relation("Questions", fields: [parent_id], references: [id])
-  questions posts[]           @relation("Questions")
+  parent    posts?            @relation("Answers", fields: [parent_id], references: [id])
+  answers   posts[]           @relation("Answers")
   parent_id Int?
   type      POST_TYPE
   title     String?
   content   String
   accepted  Boolean?
-  tags      Int[]
+  tags      posts_tags[]
   votes     post_user_votes[]
 
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 }
 
-model post_user_votes {
+model posts_tags {
   id      Int   @id @default(autoincrement())
-  user    users @relation(fields: [user_id], references: [id])
-  user_id Int
   post    posts @relation(fields: [post_id], references: [id])
   post_id Int
+  tag     tags  @relation(fields: [tag_id], references: [id])
+  tag_id  Int
+}
+
+model post_user_votes {
+  id      Int       @id @default(autoincrement())
+  user    users     @relation(fields: [user_id], references: [id])
+  user_id Int
+  post    posts     @relation(fields: [post_id], references: [id])
+  post_id Int
+  type    VOTE_TYPE
 
   @@unique([user_id, post_id], name: "user_id_post_id")
 }
 
 model tags {
-  id          Int    @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   name        String
-  slug        String @unique
+  slug        String       @unique
   description String
+  posts       posts_tags[]
 }

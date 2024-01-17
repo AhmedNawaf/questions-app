@@ -17,7 +17,6 @@
     "@mui/icons-material": "^5.15.2",
     "@mui/material": "^5.15.2",
     "@prisma/client": "^5.7.1",
-    "@tanstack/react-query": "^5.15.0",
     "axios": "^1.6.3",
     "bcrypt": "^5.1.1",
     "cookie": "^0.6.0",
@@ -29,7 +28,8 @@
     "react-dom": "^18",
     "react-intl": "^6.5.5",
     "stylis": "^4.3.1",
-    "stylis-plugin-rtl": "^2.1.1"
+    "stylis-plugin-rtl": "^2.1.1",
+    "swr": "^2.2.4"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

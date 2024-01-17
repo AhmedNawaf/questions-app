@@ -2,19 +2,17 @@ import { usePosts } from '@/src/hooks/usePost';
 import MainLayout from '@/src/layouts/Main';
 import QList from '@/src/components/QItem';
 import Pages from '@/src/components/Pagination';
-import {
-  makeStyles,
-  ButtonGroup,
-  Button,
-  Box,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Button, Box, Typography, useTheme } from '@mui/material';
 import { FormattedMessage } from 'react-intl';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import Head from 'next/head';
+import { prisma } from '@/src/utils/db';
+import { tags } from '@prisma/client';
+// import Tag from 'models/tag'
+// import dbConnect from 'utils/dbConnect'
 
-export default function Home() {
+export default function Show({ params: tag }: { params: tags }) {
   const theme = useTheme();
   const classes = {
     titleContainer: {
@@ -28,21 +26,19 @@ export default function Home() {
   };
   const router = useRouter();
   const page = router.query.page || 1;
-  const sort = router.query.sort;
-
-  const { data, isLoading } = usePosts({
-    page: Number(page),
-    sort: sort === 'asc' ? 'asc' : 'desc',
-  });
-  if (isLoading) return <Box>Loading ...</Box>;
+  const { data } = usePosts({ page: Number(page), tag: tag.id });
+  if (!data) return <Box>Loading ...</Box>;
   return (
     <MainLayout>
+      <Head>
+        <title>{tag?.name}</title>
+      </Head>
       <Box sx={classes.titleContainer}>
         <Typography
           variant='h5'
           sx={classes.title}
         >
-          <Filters />
+          {tag?.name}
         </Typography>
         <Box marginY={'auto'}>
           <Link
@@ -60,31 +56,29 @@ export default function Home() {
           </Link>
         </Box>
       </Box>
-      <QList posts={data?.posts} />
+      <QList posts={data.posts} />
       <Pages
-        totalPages={data?.totalPages}
+        totalPages={data.totalPages}
         currentPage={Number(page)}
       />
     </MainLayout>
   );
 }
 
-function Filters() {
-  const router = useRouter();
-  const navigate = (sort: 'asc' | 'desc') => {
-    router.push({
-      pathname: '/',
-      query: { ...router.query, sort },
-    });
+export async function getStaticPaths() {
+  const items = await prisma.tags.findMany();
+  const paths = items.map((e) => ({ params: { slug: e.slug.toString() } }));
+  return {
+    paths,
+    fallback: true,
   };
-  return (
-    <ButtonGroup size='small'>
-      <Button onClick={() => navigate('desc')}>
-        <FormattedMessage id={'btn.newest'} />
-      </Button>
-      <Button onClick={() => navigate('asc')}>
-        <FormattedMessage id={'btn.oldest'} />
-      </Button>
-    </ButtonGroup>
-  );
+}
+
+export async function getStaticProps({ params }: { params: { slug: string } }) {
+  let item = await prisma.tags.findFirst({ where: { slug: params.slug } });
+  return {
+    props: {
+      params: JSON.parse(JSON.stringify(item)),
+    },
+  };
 }

@@ -1,6 +1,8 @@
 import { createTheme } from '@mui/material/styles';
 import { red } from '@mui/material/colors';
 
+// Todo: Override the prop for background key
+
 const theme = createTheme({
   direction: 'rtl',
   typography: {
@@ -29,7 +31,7 @@ const theme = createTheme({
     },
     background: {
       default: '#f2f2f2',
-      // title: '#f4f7f9'
+      // title: '#f4f7f9',
     },
   },
 });
